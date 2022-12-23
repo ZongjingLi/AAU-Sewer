@@ -6,6 +6,7 @@ import numpy as np
 from torch.utils.data import DataLoader,Dataset
 
 from opt import *
+from config import *
 
 import os
 import glob
@@ -17,12 +18,9 @@ cv2.setNumThreads(0)
 import torch
 import torch.utils.data as data_utl
 
-from opt import *
-
 from utils import *
 
-
-dataDir = config.data_dir
+dataDir = opt.data_dir
 hdf5Files = ["training_pointcloud_hdf5", "testing_pointcloud_hdf5"]
 dataTypes = ["synthetic", "real"]
 partitions = ["Training", "Validation"]

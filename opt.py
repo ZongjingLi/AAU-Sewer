@@ -7,3 +7,5 @@ parser.add_argument("--data_dir",default = "/Users/melkor/Desktop/datasets/AAU")
 parser.add_argument("--epoch",default = 100)
 
 opt = parser.parse_args(args = [])
+
+
