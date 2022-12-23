@@ -5,6 +5,9 @@ import torch.nn.functional as F
 
 import numpy as np
 
+from model import *
+from dataloader import *
+
 import argparse 
 from opt import *
 
@@ -20,4 +23,4 @@ def train(model,dataset,config):
     return model
 
 if __name__ == "__main__":
-    train(0,0,config)
+    train(0,0,opt)
