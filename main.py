@@ -24,8 +24,12 @@ def train(model,dataset,config):
     optim = torch.optim.Adam(model.parameters(), lr = config.lr)
 
     for epoch in range(config.epoch):
+        total_loss = 0
+        itr = 0
         for sample in range(config.batch_size):
-            pass
+            itr += 1
+
+        print("epoch: {} itr:{} total_loss:{}".format(epoch,itr,total_loss))
 
     return model
 
