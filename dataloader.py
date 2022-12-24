@@ -20,7 +20,7 @@ import torch.utils.data as data_utl
 
 from utils import *
 
-dataDir = opt.data_dir
+dataDir = "/Users/melkor/Desktop/datasets/AAU"
 hdf5Files = ["training_pointcloud_hdf5", "testing_pointcloud_hdf5"]
 dataTypes = ["synthetic", "real"]
 partitions = ["Training", "Validation"]
@@ -51,52 +51,30 @@ for h5 in hdf5Files:
 """
 
 class AAUSewer(Dataset):
-    def __init__(self,split = "train"):
+    def __init__(self,split = "train",type = "real"):
         super().__init__()
         self.split = split
         
         self.train_data = []
-        self.test_data = []
+        self.labels = []
 
-        for h5 in hdf5Files:
-            for dt in dataTypes:
-                path = os.path.join(dataDir, "{}_{}.h5".format(h5, dt))
+        path = os.path.join(dataDir, "{}_{}.h5".format("{}ing_pointcloud_hdf5".format(split), type))
+        print(path)
+        with h5py.File(path, 'r') as hdf:          
+            if split == "train":
+                partitions = ["Training"]
+            else:
+                partitions = ["Testing"]
 
-                with h5py.File(path, 'r') as hdf:          
-                    if h5 == "training_pointcloud_hdf5":
-                        partitions = ["Training", "Validation"]
-                    else:
-                        partitions = ["Testing"]
+            for partition in partitions:
+                self.train_data = np.asarray(hdf[f'{partition}/PointClouds'][:])
+                self.labels = np.asarray(hdf[f'{partition}/Labels'][:])
+      
 
-                    for partition in partitions:
-                        data = np.asarray(hdf[f'{partition}/PointClouds'][:])
-                        labels = np.asarray(hdf[f'{partition}/Labels'][:])
-
-                        uniqueLabels, uniqueCounts = np.unique(labels, return_counts = True)
-                        
-                        if partition == "Testing":
-                            self.test_data.append({"file":path})
-                        else:
-                            self.train_data.append(
-                                {"file_path":path,
-                                "shape":data.shape,
-                                "label":labels.shape})
-                        #print(f'\nFilepath: {path}')
-                        #print(f'[{partition} Data]')
-                        print(f'Data Shape: {data.shape} | Type: {data[0].dtype}')
-                        print(f'Label Shape: {labels.shape} | Type: {labels[0].dtype}')
-                        print(f'Labels: {uniqueLabels} | Counts: {uniqueCounts}\n')
-    
-    def __len__(self):
-        if self.split == "train":return 10
-        else:return 10
+    def __len__(self):return self.labels.shape[0]
 
     def __getitem__(self,index):
-        if self.split == "train":
-            data = self.train_data[index]
-        else:
-            data = self.test_data[index]
-        return data
+        return self.train_data[index],self.labels[index]
 
 
 data_dir = 'velodyne'
