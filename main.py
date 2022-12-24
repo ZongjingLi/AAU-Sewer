@@ -33,4 +33,4 @@ if __name__ == "__main__":
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     model = RPN3D("Car",1,1).to(device)
 
-    train(0,0,opt)
+    train(model,0,opt)

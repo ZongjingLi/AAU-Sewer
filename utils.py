@@ -9,6 +9,7 @@ import numpy as np
 
 import math
 
+from config import *
 from opt import *
 
 
