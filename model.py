@@ -6,9 +6,12 @@ from config import *
 from utils  import *
 import pdb
 
+
 import os
 
+from config import *
 cfg = config
+
 
 class VFELayer(nn.Module):
     def __init__(self, in_channels, out_channels):

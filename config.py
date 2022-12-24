@@ -6,7 +6,6 @@ import math
 __C = edict()
 config = __C
 # Consumers can get config by: import config as cfg
-config = __C
 
 # For dataset dir
 __C.DATA_DIR = './data/MD_KITTI'

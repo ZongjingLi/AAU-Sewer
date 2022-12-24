@@ -27,6 +27,7 @@ partitions = ["Training", "Validation"]
 
 classLabels = {0:"Normal", 1:"Displacement", 2:"Brick", 3:"Rubber Ring"}
 
+"""
 for h5 in hdf5Files:
     for dt in dataTypes:
         path = os.path.join(dataDir, "{}_{}.h5".format(h5, dt))
@@ -47,6 +48,7 @@ for h5 in hdf5Files:
                 print(f'Data Shape: {data.shape} | Type: {data[0].dtype}')
                 print(f'Label Shape: {labels.shape} | Type: {labels[0].dtype}')
                 print(f'Labels: {uniqueLabels} | Counts: {uniqueCounts}\n')
+"""
 
 class AAUSewer(Dataset):
     def __init___(self,split = "train"):
@@ -85,7 +87,9 @@ class AAUSewer(Dataset):
                         print(f'Label Shape: {labels.shape} | Type: {labels[0].dtype}')
                         print(f'Labels: {uniqueLabels} | Counts: {uniqueCounts}\n')
     
-    def __len__(self):return 0
+    def __len__(self):
+        if self.split == "train":return 
+        else:return 
 
     def __getitem__(self,index):
         if self.split == "train":
