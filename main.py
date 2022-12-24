@@ -11,7 +11,6 @@ from dataloader import *
 import argparse 
 from opt import *
 
-from dataloader import *
 from model    import *
 from config   import *
 from torch.utils.data import DataLoader
@@ -26,8 +25,14 @@ def train(model,dataset,config):
     for epoch in range(config.epoch):
         total_loss = 0
         itr = 0
-        for sample in range(config.batch_size):
-            itr += 1
+        
+        possible_index = list(range(len(dataset)))
+        while len(possible_index) != 0:
+            for sample in range(config.batch_size):
+                sample_loc = np.random.choice(possible_index)
+                possible_index.remove(sample_loc)
+
+                itr += 1 # add one more iteration
 
         print("epoch: {} itr:{} total_loss:{}".format(epoch,itr,total_loss))
 
@@ -37,4 +42,5 @@ if __name__ == "__main__":
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     model = RPN3D("Car",1,1).to(device)
 
-    train(model,0,opt)
+    aau_dataset = AAUSewer("train")
+    train(model,aau_dataset,opt)

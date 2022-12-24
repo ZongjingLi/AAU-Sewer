@@ -47,11 +47,11 @@ for h5 in hdf5Files:
                 print(f'[{partition} Data]')
                 print(f'Data Shape: {data.shape} | Type: {data[0].dtype}')
                 print(f'Label Shape: {labels.shape} | Type: {labels[0].dtype}')
-                print(f'Labels: {uniqueLabels} | Counts: {uniqueCounts}\n')
+                print(f'Labels: {uniqueLabels} | Counts: {uniqueCounts}')
 """
 
 class AAUSewer(Dataset):
-    def __init___(self,split = "train"):
+    def __init__(self,split = "train"):
         super().__init__()
         self.split = split
         
@@ -88,8 +88,8 @@ class AAUSewer(Dataset):
                         print(f'Labels: {uniqueLabels} | Counts: {uniqueCounts}\n')
     
     def __len__(self):
-        if self.split == "train":return 
-        else:return 
+        if self.split == "train":return 10
+        else:return 10
 
     def __getitem__(self,index):
         if self.split == "train":
