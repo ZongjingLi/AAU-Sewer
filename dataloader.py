@@ -5,7 +5,6 @@ import numpy as np
 
 from torch.utils.data import DataLoader,Dataset
 
-from opt import *
 from config import *
 
 import os

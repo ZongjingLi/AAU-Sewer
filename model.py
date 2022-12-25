@@ -249,20 +249,20 @@ def smooth_l1(deltas, targets, sigma = 3.0):
 
     return smooth_l1
 
+if __name__ == "__main__":
 
-net1 = VFELayer(7,20)
-net2 = VFELayer(20,7)
-fcn = FeatureNet()
+    net1 = VFELayer(7,20)
+    net2 = VFELayer(20,7)
+    fcn = FeatureNet()
 
-num = 434
-inputs = torch.randn([num,35,7]).float()
-coords = torch.randn([num,4]).long()
-vmax, _ = torch.max(inputs, dim = 2, keepdim = True)
+    num = 434
+    inputs = torch.randn([num,35,7]).float()
+    coords = torch.randn([num,4]).long()
+    vmax, _ = torch.max(inputs, dim = 2, keepdim = True)
 
-outputs = net1(inputs,vmax)
-print(outputs.shape)
-outputs = net2(outputs,vmax)
+    outputs = net1(inputs,vmax)
+    print(outputs.shape)
+    outputs = net2(outputs,vmax)
 
-output2 = fcn()
-
+    output2 = fcn()
 
