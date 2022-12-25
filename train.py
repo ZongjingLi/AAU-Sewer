@@ -20,6 +20,8 @@ def train(model,dataset,config):
                 sample_loc = np.random.choice(possible_index)
                 possible_index.remove(sample_loc)
 
+                inputs,label = dataset[sample_loc]
+                print(inputs.shape,label)
                 itr += 1 # add one more iteration
 
         print("epoch: {} itr:{} total_loss:{}".format(epoch,itr,total_loss))

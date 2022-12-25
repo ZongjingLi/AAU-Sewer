@@ -52,7 +52,7 @@ class FeatureNet(nn.Module):
     def __init__(self):
         super(FeatureNet, self).__init__()
 
-        self.vfe1 = VFELayer(7, 32)
+        self.vfe1 = VFELayer(3, 32)
         self.vfe2 = VFELayer(32, 128)
 
 
@@ -67,16 +67,14 @@ class FeatureNet(nn.Module):
         vmax, _ = torch.max(feature, dim = 2, keepdim = True)
         mask = (vmax != 0)  # [ΣK, T, 1]
 
+
         x = self.vfe1(feature, mask)
         x = self.vfe2(x, mask)
 
         # [ΣK, 128]
-        print(x.shape)
+        print(feature.shape,x.shape)
         voxelwise, _ = torch.max(x, dim = 1)
 
-        print(coordinate.shape)
-        print(voxelwise.shape)
-        print(voxelwise)
 
         # Car: [B, 10, 400, 352, 128]; Pedestrain/Cyclist: [B, 10, 200, 240, 128]
         #print(cfg.INPUT_DEPTH, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH)
@@ -84,15 +82,18 @@ class FeatureNet(nn.Module):
 
         #print(torch.Size([batch_size, cfg.INPUT_DEPTH, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 128]))
         #print(coordinate.t().shape,voxelwise.shape)
+        
+        coordinate = torch.abs(coordinate)
+        print(coordinate.shape)
+        print(voxelwise.shape)
 
-        outputs = torch.sparse.FloatTensor(coordinate.t(), voxelwise,torch.Size([batch_size, cfg.INPUT_DEPTH, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 128]))
-
+        outputs = torch.sparse.FloatTensor(coordinate.t(), voxelwise,torch.Size([cfg.INPUT_DEPTH, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH,128]))
+        print(outputs.shape)
         #print(outputs.shape)
         outputs = outputs.to_dense()
         outputs = outputs.reshape( torch.Size([batch_size, cfg.INPUT_DEPTH, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 128]))
 
         return outputs
-
 
 class ConvMD(nn.Module):
     def __init__(self, M, cin, cout, k, s, p, bn = True, activation = True):
@@ -157,112 +158,171 @@ class Deconv2D(nn.Module):
 
         return F.relu(out)
 
+class STN3d(nn.Module):
+    def __init__(self):
+        super(STN3d, self).__init__()
+        self.conv1 = torch.nn.Conv1d(3, 64, 1)
+        self.conv2 = torch.nn.Conv1d(64, 128, 1)
+        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
+        self.fc1 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, 9)
+        self.relu = nn.ReLU()
 
-class MiddleAndRPN(nn.Module):
-    def __init__(self, alpha = 1.5, beta = 1, sigma = 3, training = True, name = ''):
-        super(MiddleAndRPN, self).__init__()
-
-        self.middle_layer = nn.Sequential(ConvMD(3, 128, 64, 3, (2, 1, 1,), (1, 1, 1)),
-                                          ConvMD(3, 64, 64, 3, (1, 1, 1), (0, 1, 1)),
-                                          ConvMD(3, 64, 64, 3, (2, 1, 1), (1, 1, 1)))
-
-
-        if cfg.DETECT_OBJ == 'Car':
-            self.block1 = nn.Sequential(ConvMD(2, 128, 128, 3, (2, 2), (1, 1)),
-                                        ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                        ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                        ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                        ConvMD(2, 128, 128, 3, (1, 1), (1, 1)))
-        else:   # Pedestrian/Cyclist
-            self.block1 = nn.Sequential(ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                        ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                        ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                        ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                        ConvMD(2, 128, 128, 3, (1, 1), (1, 1)))
-
-        self.deconv1 = Deconv2D(128, 256, 3, (1, 1), (1, 1))
-
-        self.block2 = nn.Sequential(ConvMD(2, 128, 128, 3, (2, 2), (1, 1)),
-                                    ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                    ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                    ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                    ConvMD(2, 128, 128, 3, (1, 1), (1, 1)),
-                                    ConvMD(2, 128, 128, 3, (1, 1), (1, 1)))
-
-        self.deconv2 = Deconv2D(128, 256, 2, (2, 2), (0, 0))
-
-        self.block3 = nn.Sequential(ConvMD(2, 128, 256, 3, (2, 2), (1, 1)),
-                                    ConvMD(2, 256, 256, 3, (1, 1), (1, 1)),
-                                    ConvMD(2, 256, 256, 3, (1, 1), (1, 1)),
-                                    ConvMD(2, 256, 256, 3, (1, 1), (1, 1)),
-                                    ConvMD(2, 256, 256, 3, (1, 1), (1, 1)),
-                                    ConvMD(2, 256, 256, 3, (1, 1), (1, 1)))
-
-        self.deconv3 = Deconv2D(256, 256, 4, (4, 4), (0, 0))
-
-        self.prob_conv = ConvMD(2, 768, 2, 1, (1, 1), (0, 0), bn = False, activation = False)
-
-        self.reg_conv = ConvMD(2, 768, 14, 1, (1, 1), (0, 0), bn = False, activation = False)
-
-        self.output_shape = [cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH]
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.bn3 = nn.BatchNorm1d(1024)
+        self.bn4 = nn.BatchNorm1d(512)
+        self.bn5 = nn.BatchNorm1d(256)
 
 
-    def forward(self, inputs):
+    def forward(self, x):
+        batchsize = x.size()[0]
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = torch.max(x, 2, keepdim=True)[0]
+        x = x.view(-1, 1024)
 
-        batch_size, DEPTH, HEIGHT, WIDTH, C = inputs.shape  # [batch_size, 10, 400/200, 352/240, 128]
+        x = F.relu(self.bn4(self.fc1(x)))
+        x = F.relu(self.bn5(self.fc2(x)))
+        x = self.fc3(x)
 
-        inputs = inputs.permute(0, 4, 1, 2, 3)  # (B, D, H, W, C) -> (B, C, D, H, W)
+        iden = Variable(torch.from_numpy(np.array([1,0,0,0,1,0,0,0,1]).astype(np.float32))).view(1,9).repeat(batchsize,1)
+        if x.is_cuda:
+            iden = iden.cuda()
+        x = x + iden
+        x = x.view(-1, 3, 3)
+        return x
 
-        temp_conv = self.middle_layer(inputs)   # [batch, 64, 2, 400, 352]
-        temp_conv = temp_conv.reshape(batch_size, -1, HEIGHT, WIDTH)   # [batch, 128, 400, 352]
 
-        temp_conv = self.block1(temp_conv)      # [batch, 128, 200, 176]
-        temp_deconv1 = self.deconv1(temp_conv)
+class STNkd(nn.Module):
+    def __init__(self, k=64):
+        super(STNkd, self).__init__()
+        self.conv1 = torch.nn.Conv1d(k, 64, 1)
+        self.conv2 = torch.nn.Conv1d(64, 128, 1)
+        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
+        self.fc1 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, k*k)
+        self.relu = nn.ReLU()
 
-        temp_conv = self.block2(temp_conv)      # [batch, 128, 100, 88]
-        temp_deconv2 = self.deconv2(temp_conv)
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.bn3 = nn.BatchNorm1d(1024)
+        self.bn4 = nn.BatchNorm1d(512)
+        self.bn5 = nn.BatchNorm1d(256)
 
-        temp_conv = self.block3(temp_conv)      # [batch, 256, 50, 44]
-        temp_deconv3 = self.deconv3(temp_conv)
+        self.k = k
 
-        temp_conv = torch.cat([temp_deconv3, temp_deconv2, temp_deconv1], dim = 1)
+    def forward(self, x):
+        batchsize = x.size()[0]
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = torch.max(x, 2, keepdim=True)[0]
+        x = x.view(-1, 1024)
 
-        # Probability score map, [batch, 2, 200/100, 176/120]
-        p_map = self.prob_conv(temp_conv)
+        x = F.relu(self.bn4(self.fc1(x)))
+        x = F.relu(self.bn5(self.fc2(x)))
+        x = self.fc3(x)
 
-        # Regression map, [batch, 14, 200/100, 176/120]
-        r_map = self.reg_conv(temp_conv)
+        iden = Variable(torch.from_numpy(np.eye(self.k).flatten().astype(np.float32))).view(1,self.k*self.k).repeat(batchsize,1)
+        if x.is_cuda:
+            iden = iden.cuda()
+        x = x + iden
+        x = x.view(-1, self.k, self.k)
+        return x
 
-        return torch.sigmoid(p_map), r_map
+class PointNetfeat(nn.Module):
+    def __init__(self, global_feat = True, feature_transform = False):
+        super(PointNetfeat, self).__init__()
+        self.stn = STN3d()
+        self.conv1 = torch.nn.Conv1d(3, 64, 1)
+        self.conv2 = torch.nn.Conv1d(64, 128, 1)
+        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.bn3 = nn.BatchNorm1d(1024)
+        self.global_feat = global_feat
+        self.feature_transform = feature_transform
+        if self.feature_transform:
+            self.fstn = STNkd(k=64)
 
-class PillarModel(nn.Module):
-    def __init__(self,input_dim,output_dim):
+    def forward(self, x):
+        n_pts = x.size()[2]
+        trans = self.stn(x)
+        x = x.transpose(2, 1)
+        x = torch.bmm(x, trans)
+        x = x.transpose(2, 1)
+        x = F.relu(self.bn1(self.conv1(x)))
+
+        if self.feature_transform:
+            trans_feat = self.fstn(x)
+            x = x.transpose(2,1)
+            x = torch.bmm(x, trans_feat)
+            x = x.transpose(2,1)
+        else:
+            trans_feat = None
+
+        pointfeat = x
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = self.bn3(self.conv3(x))
+        x = torch.max(x, 2, keepdim=True)[0]
+        x = x.view(-1, 1024)
+        if self.global_feat:
+            return x, trans, trans_feat
+        else:
+            x = x.view(-1, 1024, 1).repeat(1, 1, n_pts)
+            return torch.cat([x, pointfeat], 1), trans, trans_feat
+
+class PointNetCls(nn.Module):
+    def __init__(self, k=2, feature_transform=False):
+        super(PointNetCls, self).__init__()
+        self.feature_transform = feature_transform
+        self.feat = PointNetfeat(global_feat=True, feature_transform=feature_transform)
+        self.fc1 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, k)
+        self.dropout = nn.Dropout(p=0.3)
+        self.bn1 = nn.BatchNorm1d(512)
+        self.bn2 = nn.BatchNorm1d(256)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x, trans, trans_feat = self.feat(x)
+        x = F.relu(self.bn1(self.fc1(x)))
+        x = F.relu(self.bn2(self.dropout(self.fc2(x))))
+        x = self.fc3(x)
+        return F.log_softmax(x, dim=1), trans, trans_feat 
+
+class PointCloudDiscrim(nn.Module):
+    def __init__(self):
         super().__init__()
-
-small_addon_for_BCE = 1e-6
-
-def smooth_l1(deltas, targets, sigma = 3.0):
-    # Reference: https://mohitjainweb.files.wordpress.com/2018/03/smoothl1loss.pdf
-    sigma2 = sigma * sigma
-    diffs = deltas - targets
-    smooth_l1_signs = torch.lt(torch.abs(diffs), 1.0 / sigma2).float()
-
-    smooth_l1_option1 = torch.mul(diffs, diffs) * 0.5 * sigma2
-    smooth_l1_option2 = torch.abs(diffs) - 0.5 / sigma2
-    smooth_l1_add = torch.mul(smooth_l1_option1, smooth_l1_signs) + torch.mul(smooth_l1_option2, 1 - smooth_l1_signs)
-    smooth_l1 = smooth_l1_add
-
-    return smooth_l1
+        self.vfe = 0
+        self.conv_feature_extractor = 0
+        self.fc_layer = 0
+    def forward(self,x):return x
 
 if __name__ == "__main__":
 
+    from dataloader import *
+    aau_syn = AAUSewer("train","synthetic")
+
     fcn = FeatureNet()
 
-    num = 434
-    inputs = torch.randn([num,35,7]).float()
-    coords = torch.randn([num,4]).long()
-    vmax, _ = torch.max(inputs, dim = 2, keepdim = True)
+    num = 1024
+    inputs = torch.randn([num,35,3]).float()
+
+    coords = torch.tensor(aau_syn[1][0])
+    coords = coords.long()
 
     print("shape of inputs:{} coords:{}".format(inputs.shape,coords.shape))
 
     output2 = fcn(inputs,coords)
+
+    print("point net set up:")
+    print(coords.shape)
+    point_net = PointNetCls(k = 4)
+    outputs = point_net(coords)
+    print(outputs)

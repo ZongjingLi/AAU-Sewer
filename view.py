@@ -23,8 +23,16 @@ fig = plt.figure(figsize=(4,4))
 
 r1 = s1
 
-ax = fig.add_subplot(111, projection='3d')
+print('input')
+N = 2000
+pcd = o3dtut.get_armadillo_mesh().sample_points_poisson_disk(N)
+# fit to unit cube
+pcd.scale(1 / np.max(pcd.get_max_bound() - pcd.get_min_bound()),
+          center=pcd.get_center())
+pcd.colors = o3d.utility.Vector3dVector(np.random.uniform(0, 1, size=(N, 3)))
+o3d.visualization.draw_geometries([pcd])
 
-for i in range(len(r1[0])):
-    ax.scatter(r1[0][i][0],r1[0][i][1],r1[0][i][2],color = "red",alpha = 0.5) 
-plt.show()
+print('voxelization')
+voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd,
+                                                            voxel_size=0.05)
+o3d.visualization.draw_geometries([voxel_grid])
