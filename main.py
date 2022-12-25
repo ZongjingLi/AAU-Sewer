@@ -19,7 +19,7 @@ from train import *
 opt_parser = argparse.ArgumentParser()
 opt_parser.add_argument("--epoch",            default = 1000)
 opt_parser.add_argument("--lr",               default = 2e-4)
-opt_parser.add_argument("--batch_size",       default = 5)
+opt_parser.add_argument("--batch_size",       default = 32)
 opt_parser.add_argument("--source_dir",       default = "/content/MD_KITTI")
 opt_parser.add_argument("--target_dir",       default = "/content/MD_KITTI")
 opt_parser.add_argument("--update_steps",     default = 5)
@@ -38,8 +38,9 @@ if __name__ == "__main__":
     aau_syn = AAUSewer("train","synthetic")
     aau_real = AAUSewer("train","real")
     
-    model = FeatureNet()
-    
+    model = PointNetCls(k = 4) # a four class point cloud classfication network
+    model = torch.load("point_net.ckpt")
+        
     train(model,aau_syn,opt)
 
     train_transfer(model,aau_syn,aau_real,opt)
