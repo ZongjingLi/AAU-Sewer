@@ -14,6 +14,7 @@ def train(model,dataset,config):
 
     history = []
     for epoch in range(config.epoch):
+        total_loss = 0
         for sample in tqdm(dataloader):
             data = sample[0];label = sample[1]
             data = torch.tensor(data).permute([0,2,1])
@@ -22,6 +23,7 @@ def train(model,dataset,config):
             loss = 0
             for i in range(label.shape[0]):
                 loss -= logsmx[i][label[i]]
+            total_loss += loss.detach().numpy()
 
             
             loss.backward()
@@ -29,11 +31,12 @@ def train(model,dataset,config):
             optim.zero_grad()
             history.append(loss.detach().numpy())
         
-            plt.plot(history)
-            plt.pause(0.001)
-            plt.cla()
+            #plt.plot(history)
+            #plt.pause(0.001)
+            #plt.cla()
             
             torch.save(model,"point_net.ckpt")
+        print("epoch: {} total_loss:{}".format(epoch,total_loss))
 
     return model
 
