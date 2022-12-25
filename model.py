@@ -56,7 +56,7 @@ class FeatureNet(nn.Module):
         self.vfe2 = VFELayer(32, 128)
 
 
-    def forward(self, feature, number, coordinate):
+    def forward(self, feature, coordinate):
 
         batch_size = len(feature)
         batch_size = 1
@@ -71,6 +71,7 @@ class FeatureNet(nn.Module):
         x = self.vfe2(x, mask)
 
         # [ΣK, 128]
+        print(x.shape)
         voxelwise, _ = torch.max(x, dim = 1)
 
         print(coordinate.shape)
@@ -234,6 +235,10 @@ class MiddleAndRPN(nn.Module):
 
         return torch.sigmoid(p_map), r_map
 
+class PillarModel(nn.Module):
+    def __init__(self,input_dim,output_dim):
+        super().__init__()
+
 small_addon_for_BCE = 1e-6
 
 def smooth_l1(deltas, targets, sigma = 3.0):
@@ -264,5 +269,4 @@ if __name__ == "__main__":
     print(outputs.shape)
     outputs = net2(outputs,vmax)
 
-    output2 = fcn()
-
+    output2 = fcn(outputs,coords)
