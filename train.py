@@ -20,7 +20,7 @@ def train(model,dataset,config):
             logsmx,_,_ = model(data)   
 
             loss = 0
-            for i in range(config.batch_size):
+            for i in range(label.shape[0]):
                 loss -= logsmx[i][label[i]]
 
             
