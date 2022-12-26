@@ -34,8 +34,8 @@ def validate_model(model,dataset):
 
 if __name__ == "__main__":
     print("start the validation process")
-    #model = torch.load("checkpoints/point_net.ckpt",map_location = "cpu")
-    model = torch.load("point_net.ckpt",map_location = "cpu")
+    model = torch.load("checkpoints/point_net.ckpt",map_location = "cpu")
+    #model = torch.load("point_net.ckpt",map_location = "cpu")
     aau_syn =  AAUSewer("train","synthetic")
     aau_real = AAUSewer("train","real")
 
