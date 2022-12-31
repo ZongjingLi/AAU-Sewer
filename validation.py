@@ -29,6 +29,7 @@ opt_parser.add_argument("--visualize_itrs",   default = 30)
 opt_parser.add_argument("--tau",              default = 0.07)
 opt_parser.add_argument("--omit_portion",     default = 0.3)
 opt_parser.add_argument("--density_reduce",   default = 0.6)
+opt_parser.add_argument("--alpha",            default = 0.01)
 opt = opt_parser.parse_args(args = [])
 
 
@@ -178,98 +179,82 @@ def train_transfer(model,source_data,target_data,update_step = opt.update_steps)
             for source_batch in tqdm(source_loader):
                 working_loss = 0
                 # calculate the transfer batch
-                _,rt_labels = target_batch
-                raw_labels,features = calculate_features(model,target_batch[0].permute([0,2,1]).to(device))
-
-                _,gt_labels = source_batch
+                _,gt_target_labels = target_batch
+                predict_target_labels,target_features = calculate_features(model,target_batch[0].permute([0,2,1]).to(device))
+                
+                # calculate the source batch
+                _,gt_source_labels = source_batch
                 data = source_batch[0].permute([0,2,1]).to(device)
                 source_labels,source_features = calculate_features(model,data)
 
-                loss = 0
+                # prediction loss on the source
+                predict_loss = 0
                 for i in range(source_labels.shape[0]):
-                    loss -= 1 * source_labels[i][gt_labels[i]]
-                
-                n = np.random.randint(800,1000)
+                    predict_loss -= source_labels[i][gt_source_labels[i]] # prediction loss
+                working_loss += predict_loss
 
-                data = data[:,:n]
-
-                logsmx,_,_ = model(data)   
-                for i in range(source_labels.shape[0]):
-                    loss -= 1 * logsmx[i][gt_labels[i]]
-
-                for i in range(raw_labels.shape[0]):
-                    loss -= raw_labels[i][rt_labels[i]]
-                working_loss += loss
-
-                optimizer.zero_grad()
-                working_loss.backward()
-                optimizer.step()
-
-                #working_loss -= raw_labels[i][label_i]- raw_labels[j][label_j]
                 # calculate contrastive loss for each label:
-                for _ in range(4):
+                for c in range(4):
                     # inter domain loss (source)
                     inter_source_loss = 0
                     logp_source = 0
+
                     for i in range(source_labels.shape[0]):
                         for j in range(source_labels.shape[0]):
                             label_i = np.argmax(source_labels[i].cpu().detach().numpy())
                             label_j = np.argmax(source_labels[j].cpu().detach().numpy())
-                            flag = label_i == label_j
-
-                            if gt_labels[i] == label_i and gt_labels[j] == label_j:
+                            flag = label_i == label_j and label_i == c
       
-                              if not flag and i!=j:   
+                            if not flag and i!=j:   
                                   logp_source -= torch.cosine_similarity(source_features[i] , source_features[j],0).exp()
-                              if i!=j and flag:
+                            if i!=j and flag:
                                   logp_source += torch.cosine_similarity(source_features[i] , source_features[j],0).exp()
                     inter_source_loss = 0 - logp_source
 
                     # inter domain loss (target)
                     inter_target_loss = 0
                     logp = 0
-                    for i in range(rt_labels.shape[0]):
-                        for j in range(rt_labels.shape[0]):
-                            label_i = np.argmax(raw_labels[i].cpu().detach().numpy())
-                            label_j = np.argmax(raw_labels[j].cpu().detach().numpy())
-                            flag = label_i == label_j
-                      
-                            if rt_labels[i] == label_i and rt_labels[j] == label_j:
+                    for i in range(gt_target_labels.shape[0]):
+                        for j in range(gt_target_labels.shape[0]):
+                            label_i = np.argmax(predict_target_labels[i].cpu().detach().numpy())
+                            label_j = np.argmax(predict_target_labels[j].cpu().detach().numpy())
+                            flag = label_i == label_j and label_i == c
+
   
-                              if not flag and i!=j:   
-                                logp -= torch.cosine_similarity(features[i] , features[j],0).exp()
-                              if i!=j and flag:
-                                logp += torch.cosine_similarity(features[i] , features[j],0).exp()
-                            #working_loss -= raw_labels[i][label_i]- raw_labels[j][label_j]
+                            if not flag and i!=j:   
+                                logp -= torch.cosine_similarity(target_features[i] , target_features[j],0).exp()
+                            if i!=j and flag:
+                                logp += torch.cosine_similarity(target_features[i] , target_features[j],0).exp()
                     inter_target_loss = 0 - logp
                     
 
                     # intra domain loss (source and target)
                     inter_domain_loss = 0
                     logp_transfer = 0
-                    for i in range(raw_labels.shape[0]):
+                    for i in range(predict_target_labels.shape[0]):
                         for j in range(source_labels.shape[0]):
-                            label_i = np.argmax(raw_labels[i].cpu().detach().numpy())
+                            label_i = np.argmax(predict_target_labels[i].cpu().detach().numpy())
                             label_j = np.argmax(source_labels[j].cpu().detach().numpy())
-                            flag = label_i == label_j
-                            #print(torch.linalg.norm(features[i] - features[j]))
-                            #print(gt_labels.shape,rt_labels.shape)
+                            flag = label_i == label_j and label_i == c
+
                             try:
-                                if rt_labels[i] == label_i and gt_labels[j] == label_j:
                                     if not flag and i!=j:   
-                                      logp_transfer -= torch.cosine_similarity(features[i] , source_features[j],0).exp()
+                                      logp_transfer -= torch.cosine_similarity(target_features[i] , source_features[j],0).exp()
                                     if i!=j and flag:
-                                      logp_transfer += torch.cosine_similarity(features[i] , source_features[j],0).exp()
+                                      logp_transfer += torch.cosine_similarity(target_features[i] , source_features[j],0).exp()
                             except:print("namo")
                     inter_domain_loss = 0 - logp_transfer
 
-                    working_loss += (inter_target_loss + inter_source_loss + inter_domain_loss) * 0.01
+                    working_loss += (inter_target_loss + inter_source_loss + inter_domain_loss) * opt.alpha
 
-
+                optimizer.zero_grad()
+                working_loss.backward()
+                optimizer.step()
  
                 total_loss += working_loss.cpu().detach().numpy()
-
-        history.append(total_loss)
+            optimizer.zero_grad()
+            
+       
       
         plt.plot(history)
         plt.pause(0.001);plt.cla()
