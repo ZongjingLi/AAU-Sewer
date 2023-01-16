@@ -127,7 +127,7 @@ class PointNetfeat(nn.Module):
             return torch.cat([x, pointfeat], 1), trans, trans_feat
 
 class PointNetCls(nn.Module):
-    def __init__(self, k=2, feature_transform=False):
+    def __init__(self, k=3, feature_transform=False):
         super(PointNetCls, self).__init__()
         self.feature_transform = feature_transform
         self.feat = PointNetfeat(global_feat=True, feature_transform=feature_transform)
@@ -141,10 +141,11 @@ class PointNetCls(nn.Module):
 
     def forward(self, x):
         x, trans, trans_feat = self.feat(x)
+
         x = F.relu(self.bn1(self.fc1(x)))
-        x = F.relu(self.bn2(self.dropout(self.fc2(x))))
-        x = self.fc3(x)
-        return F.log_softmax(x, dim=1), trans, trans_feat 
+        feat = F.relu(self.bn2(self.dropout(self.fc2(x))))
+        x = self.fc3(feat)
+        return F.log_softmax(x, dim=1), feat, trans_feat 
 
 class PointCloudDiscrim(nn.Module):
     def __init__(self):
@@ -181,16 +182,3 @@ class PointNetDenseCls(nn.Module):
         x = x.view(batchsize, n_pts, self.k)
         return x, trans, trans_feat
 
-if __name__ == "__main__":
-
-    from dataloader import *
-    aau_syn = AAUSewer("train","synthetic")
-    aau_real = AAUSewer("train","synthetic")
-
-    coords = torch.tensor(aau_syn[0:2][0]).permute([0,2,1])
-    print("point net set up:")
-    print(coords.shape)
-    # PointNetDenseCls(k = 4)
-    point_net = PointNetCls(k = 4)
-    outputs,_,_ = point_net(coords)
-    print(outputs)

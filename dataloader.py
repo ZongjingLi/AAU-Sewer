@@ -73,7 +73,10 @@ class AAUSewer(Dataset):
     def __len__(self):return self.labels.shape[0]
 
     def __getitem__(self,index):
-        return self.train_data[index],self.labels[index]
+        labels = self.labels[index]
+        inc = [max(l,1) for l in labels]
+
+        return self.train_data[index],inc
 
 
 data_dir = 'velodyne'
