@@ -294,3 +294,10 @@ if __name__ == "__main__":
     aau_real = AAUSewer("train","real")
 
     validate_model(model,aau_syn)
+
+    aau_syn_train =  aau_syn = AAUSewer("train","synthetic")#
+    aau_syn_test =  aau_syn = AAUSewer("test","synthetic")#
+
+    aau_real_train =  aau_syn = AAUSewer("train","real")#
+    aau_real_test =  aau_syn = AAUSewer("test","real")#
+    
