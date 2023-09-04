@@ -1032,3 +1032,41 @@ def partial_omit_sample(inputs,portion):
             del vox_coordinates[i] 
     vox_numbers -= counter
     return [tag,label,vox_features,vox_numbers,vox_coordinates]
+
+from torch.utils.data import DataLoader
+
+def eval(model,dataset):
+    if not isinstance(dataset,DataLoader):
+        dataloader = DataLoader(dataset,shuffle = True,batch_size = 4)
+    else: dataloader = dataset
+
+    pt_at = 0
+    pt_af = 0
+    pf_at = 0
+    pf_af = 0
+
+    for sample in dataloader:
+        x,label = sample
+
+        prediction,feature,_ = model(x.permute(0,2,1))
+        cls_num = prediction[0].shape[0]
+        for cls in range(cls_num):
+            for i in range(label.shape[0]):
+                predict_label = np.argmax(prediction[i].cpu().detach().numpy())
+                actual_label = int(label[i])
+                if predict_label == cls:
+                    if actual_label == predict_label:pt_at += 1.
+                    else:pt_af += 1.
+
+                if predict_label != cls:
+                    if actual_label == predict_label:pf_at += 1.
+                    else:pf_af += 1.
+    accuracy = (pt_at + pt_af) / (pt_at + pt_af + pf_at + pf_af)
+    precision = pt_at/(pt_at + pf_at)
+    recall = pt_at/(pt_at + pf_af)
+    f1 = 2 * (precision * recall) / (precision + recall )
+    print("Raw:{} {} {} {}".format(pt_at,pt_af,pf_at,pf_af))
+    print("Actual:{} Precision:{} Recall:{} F1:{} ".format(accuracy,\
+                            pt_at/(pt_at + pf_at),\
+                            pt_at/(pt_at + pf_af),\
+                                f1))

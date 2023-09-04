@@ -4,17 +4,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-
-from model import *
-from dataloader import *
-
 import argparse 
 
 from model    import *
 from config   import *
+from dataloader import *
 from torch.utils.data import DataLoader
+from sklearn.model_selection import KFold
+from torch.utils.data import Dataset, DataLoader,TensorDataset,random_split,SubsetRandomSampler, ConcatDataset
 
 from train import *
+from utils import *
 
 opt_parser = argparse.ArgumentParser()
 opt_parser.add_argument("--epoch",            default = 1000)
@@ -27,19 +27,60 @@ opt_parser.add_argument("--visualize_itrs",   default = 30)
 opt_parser.add_argument("--tau",              default = 0.07)
 opt_parser.add_argument("--omit_portion",     default = 0.3)
 opt_parser.add_argument("--density_reduce",   default = 0.6)
+opt_parser.add_argument("--transfer_name",    default = "CORAL")
 opt = opt_parser.parse_args(args = [])
 
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+TransferName = opt.transfer_name
+root = "AAU/"
 
-if __name__ == "__main__":
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-    aau_syn = AAUSewer("train","synthetic")
-    aau_real = AAUSewer("train","real")
-    
-    model = PointNetCls(k = 4) # a four class point cloud classfication network
-    model = torch.load("point_net.ckpt")
-        
-    train(model,aau_syn,opt)
 
-    train_transfer(model,aau_syn,aau_real,opt)
-    
+# [Create Model]
+model = PointNetCls(k = 4)
+model = model.to(device)
+# create dataset
+
+
+#model = train(model, aau_syn_train,opt)
+
+aau_syn_test =  AAUSewer("test","synthetic")
+#aau_syn_test.train_data = torch.tensor(np.load(root+"coral_syn_test.npy".format(TransferName))).float()
+
+aau_real_test = AAUSewer("test","real")
+#aau_real_test.train_data = torch.tensor(np.load(root+"coral_real_test.npy".format(TransferName))).float()
+
+aau_syn_train =  AAUSewer("train","synthetic")
+#aau_syn_train.train_data = torch.tensor(np.load(root+"coral_syn_train.npy".format(TransferName))).float()
+
+aau_real_train = AAUSewer("train","real")
+#aau_real_train.train_data = torch.tensor(np.load(root+"coral_real_train.npy".format(TransferName))).float()
+
+"""
+[Setup]
+"""
+
+source_dataset = torch.utils.data.ConcatDataset([aau_syn_train,aau_syn_test])
+target_dataset = torch.utils.data.ConcatDataset([aau_real_train,aau_real_test])
+
+k = 10
+splits=KFold(n_splits=k,shuffle=True,random_state=42)
+
+history = {'train_loss': [], 'test_loss': [],'train_acc':[],'test_acc':[]}
+eval(model,dataset = target_dataset)
+for source_fold, (source_train_idx,source_val_idx) in enumerate(splits.split(np.arange(len(source_dataset)))):
+    target_fold, (target_train_idx,target_val_idx) = next(enumerate(splits.split(np.arange(len(target_dataset)))))
+    print('Fold {}'.format(source_fold + 1))
+
+    source_train_sampler = SubsetRandomSampler(source_train_idx)
+    source_test_sampler = SubsetRandomSampler(source_val_idx)
+    source_train_loader = DataLoader(source_dataset, batch_size=opt.batch_size, sampler=source_train_sampler)
+    source_test_loader = DataLoader(source_dataset, batch_size=opt.batch_size, sampler=source_test_sampler)
+
+
+    target_train_sampler = SubsetRandomSampler(target_train_idx)
+    target_test_sampler = SubsetRandomSampler(target_val_idx)
+    target_train_loader = DataLoader(target_dataset, batch_size=opt.batch_size, sampler=target_train_sampler)
+    target_test_loader = DataLoader(target_dataset, batch_size=opt.batch_size, sampler=target_test_sampler)
+
+    eval(model,target_test_loader)

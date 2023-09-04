@@ -19,47 +19,25 @@ import torch.utils.data as data_utl
 
 from utils import *
 
-dataDir = "/AAU"
+dataDir = "AAU"
 hdf5Files = ["training_pointcloud_hdf5", "testing_pointcloud_hdf5"]
 dataTypes = ["synthetic", "real"]
 partitions = ["Training", "Validation"]
 
 classLabels = {0:"Normal", 1:"Displacement", 2:"Brick", 3:"Rubber Ring"}
 
-"""
-for h5 in hdf5Files:
-    for dt in dataTypes:
-        path = os.path.join(dataDir, "{}_{}.h5".format(h5, dt))
-
-        with h5py.File(path, 'r') as hdf:          
-            if h5 == "training_pointcloud_hdf5":
-                partitions = ["Training", "Validation"]
-            else:
-                partitions = ["Testing"]
-
-            for partition in partitions:
-                data = np.asarray(hdf[f'{partition}/PointClouds'][:])
-                labels = np.asarray(hdf[f'{partition}/Labels'][:])
-
-                uniqueLabels, uniqueCounts = np.unique(labels, return_counts = True)
-                print(f'\nFilepath: {path}')
-                print(f'[{partition} Data]')
-                print(f'Data Shape: {data.shape} | Type: {data[0].dtype}')
-                print(f'Label Shape: {labels.shape} | Type: {labels[0].dtype}')
-                print(f'Labels: {uniqueLabels} | Counts: {uniqueCounts}')
-"""
 
 class AAUSewer(Dataset):
-    def __init__(self,split = "train",type = "real"):
+    def __init__(self,split = "train",type = "real",l=None, dataDir = dataDir):
         super().__init__()
         self.split = split
-        
+        self.length = l
         self.train_data = []
         self.labels = []
 
         path = os.path.join(dataDir, "{}_{}.h5".format("{}ing_pointcloud_hdf5".format(split), type))
         print(path)
-        with h5py.File(path, 'r') as hdf:          
+        with h5py.File(path, 'r') as hdf:
             if split == "train":
                 partitions = ["Training"]
             else:
@@ -68,15 +46,15 @@ class AAUSewer(Dataset):
             for partition in partitions:
                 self.train_data = np.asarray(hdf[f'{partition}/PointClouds'][:])
                 self.labels = np.asarray(hdf[f'{partition}/Labels'][:])
-      
 
-    def __len__(self):return self.labels.shape[0]
+
+    def __len__(self):
+      if self.length is not None:return self.length
+      return self.labels.shape[0]
 
     def __getitem__(self,index):
-        labels = self.labels[index]
-        inc = [max(l,1) for l in labels]
-
-        return self.train_data[index],inc
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        return torch.tensor(self.train_data[index]).to(device),self.labels[index]
 
 
 data_dir = 'velodyne'

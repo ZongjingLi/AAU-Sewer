@@ -8,31 +8,56 @@ import matplotlib.pyplot as plt
 
 def train(model,dataset,config):
 
-    # setup the optimizer and lr    
+    # setup the optimizer and lr
     optim = torch.optim.Adam(model.parameters(), lr = config.lr)
+    config.device =  "cuda:0" if torch.cuda.is_available() else "cpu"
     dataloader = DataLoader(dataset,batch_size = config.batch_size)
-
     history = []
     for epoch in range(config.epoch):
         total_loss = 0
         for sample in tqdm(dataloader):
-            data = sample[0];label = sample[1]
-            data = torch.tensor(data).permute([0,2,1])
-            logsmx,_,_ = model(data)   
+            data = sample[0].to(config.device);label = sample[1]
+            data = data.permute([0,2,1])
+
+            logsmx,_,_ = model(data)
 
             loss = 0
             for i in range(label.shape[0]):
                 loss -= logsmx[i][label[i]]
-            total_loss += loss.detach().numpy()
+            total_loss += loss.cpu().detach().numpy()
 
-            
+
             loss.backward()
             optim.step()
             optim.zero_grad()
-            history.append(loss.detach().numpy())
 
-            torch.save(model,"point_net.ckpt")
+            # augument the data to get the result
+            data = sample[0].to(config.device);label = sample[1]
+            data = data.permute([0,2,1])
+
+            reduce_number = 300
+            avail= list(range(1024))
+
+            n = np.random.randint(800,1000)
+
+            data = data[:,:n]
+
+            logsmx,_,_ = model(data)
+
+            loss = 0
+            for i in range(label.shape[0]):
+                loss -= logsmx[i][label[i]]
+            total_loss += loss.cpu().detach().numpy()
+
+
+        torch.save(model,"point_net_ckpt.ckpt")
+        history.append(total_loss)
         print("epoch: {} total_loss:{}".format(epoch,total_loss))
+
+
+        plt.plot(history)
+        plt.pause(0.001)
+        plt.cla()
 
     return model
 
