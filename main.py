@@ -41,8 +41,8 @@ model = PointNetCls(k = 4)
 model = model.to(device)
 # create dataset
 
-
-#model = train(model, aau_syn_train,opt)
+aau_syn_train =  AAUSewer("train","synthetic")
+model = train(model, aau_syn_train,opt)
 
 aau_syn_test =  AAUSewer("test","synthetic")
 #aau_syn_test.train_data = torch.tensor(np.load(root+"coral_syn_test.npy".format(TransferName))).float()
