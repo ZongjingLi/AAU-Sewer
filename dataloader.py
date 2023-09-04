@@ -19,7 +19,7 @@ import torch.utils.data as data_utl
 
 from utils import *
 
-dataDir = "AAU"
+dataDir = "/content/gdrive/MyDrive/AAU"
 hdf5Files = ["training_pointcloud_hdf5", "testing_pointcloud_hdf5"]
 dataTypes = ["synthetic", "real"]
 partitions = ["Training", "Validation"]

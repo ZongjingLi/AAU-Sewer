@@ -32,7 +32,7 @@ opt = opt_parser.parse_args(args = [])
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 TransferName = opt.transfer_name
-root = "AAU/"
+root = "/content/gdrive/MyDrive/AAU/"
 
 
 
