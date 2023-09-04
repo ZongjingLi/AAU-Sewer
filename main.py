@@ -42,7 +42,7 @@ model = model.to(device)
 # create dataset
 
 aau_syn_train =  AAUSewer("train","synthetic")
-model = train(model, aau_syn_train,opt)
+#model = train(model, aau_syn_train,opt)
 
 aau_syn_test =  AAUSewer("test","synthetic")
 aau_syn_test.train_data = torch.tensor(np.load(root+"coral_syn_test.npy".format(TransferName))).float()
@@ -50,7 +50,7 @@ aau_syn_test.train_data = torch.tensor(np.load(root+"coral_syn_test.npy".format(
 aau_real_test = AAUSewer("test","real")
 aau_real_test.train_data = torch.tensor(np.load(root+"coral_real_test.npy".format(TransferName))).float()
 
-aau_syn_train =  AAUSewer("test","synthetic")
+aau_syn_train =  AAUSewer("train","synthetic")
 aau_syn_train.train_data = torch.tensor(np.load(root+"coral_syn_train.npy".format(TransferName))).float()
 
 aau_real_train = AAUSewer("train","real")
