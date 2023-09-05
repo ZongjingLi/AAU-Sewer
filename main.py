@@ -27,7 +27,7 @@ opt_parser.add_argument("--visualize_itrs",   default = 30)
 opt_parser.add_argument("--tau",              default = 0.07)
 opt_parser.add_argument("--omit_portion",     default = 0.3)
 opt_parser.add_argument("--density_reduce",   default = 0.6)
-opt_parser.add_argument("--transfer_name",    default = "CORAL")
+opt_parser.add_argument("--transfer_name",    default = "coral")
 opt = opt_parser.parse_args(args = [])
 
 remote = 1
@@ -45,21 +45,21 @@ aau_syn_train =  AAUSewer("train","synthetic")
 model = train(model, aau_syn_train,opt)
 
 aau_syn_test =  AAUSewer("test","synthetic")
-aau_syn_test.train_data = torch.tensor(np.load(root+"coral_syn_test.npy".format(TransferName))).float()
+aau_syn_test.train_data = torch.tensor(np.load(root+"{}_syn_test.npy".format(TransferName))).float()
 
 aau_real_test = AAUSewer("test","real")
-aau_real_test.train_data = torch.tensor(np.load(root+"coral_real_test.npy".format(TransferName))).float()
+aau_real_test.train_data = torch.tensor(np.load(root+"{}_real_test.npy".format(TransferName))).float()
 
 aau_syn_train =  AAUSewer("train","synthetic")
-aau_syn_train.train_data = torch.tensor(np.load(root+"coral_syn_train.npy".format(TransferName))).float()
+aau_syn_train.train_data = torch.tensor(np.load(root+"{}_syn_train.npy".format(TransferName))).float()
 
 aau_real_train = AAUSewer("train","real")
-aau_real_train.train_data = torch.tensor(np.load(root+"coral_real_train.npy".format(TransferName))).float()
+aau_real_train.train_data = torch.tensor(np.load(root+"{}_real_train.npy".format(TransferName))).float()
 
 """
 [Setup]
 """
-torch.save(model,"eval_model.ckpt")
+torch.save(model,"{}_eval_model.ckpt".format(opt.transfer_name))
 
 source_dataset = torch.utils.data.ConcatDataset([aau_syn_train,aau_syn_test])
 target_dataset = torch.utils.data.ConcatDataset([aau_real_train,aau_real_test])

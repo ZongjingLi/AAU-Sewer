@@ -8,7 +8,7 @@ from dataloader import *
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("--transfer_name",  default = "coral")
+parser.add_argument("--transfer_name",  default = "tca")
 opt = parser.parse_args()
 
 TransferName = opt.transfer_name
@@ -22,12 +22,12 @@ if __name__ == "__main__":
     M = aau_real_test.train_data.shape[0]
     print("Transfer from {} to {}".format(N,M))
     npt = 1024
-    if TransferName == "CORAL":
+    if TransferName == "coral":
       transfor = CORAL(scaling='standard') # [Transfer Model]
-    if TransferName == "Locit":
+    if TransferName == "locit":
       transfor = LocIT()# [Transfer Model]
-    if TransferName == "TCA":
-      transfor = TCA()# [Transfer Model]
+    if TransferName == "tca":
+      transfor = TCA(n_components = 1024)# [Transfer Model]
     outputs = transfor.fit_transfer(aau_syn_test.train_data.reshape(N,npt*3), aau_real_test.train_data.reshape(M,npt*3))
     Xs_trans, Xt_trans = outputs
     aau_syn_test.train_data = torch.tensor(Xs_trans.reshape(N,1024,3)).float()
