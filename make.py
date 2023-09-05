@@ -6,7 +6,13 @@ import torch.nn as nn
 import numpy as np
 from dataloader import *
 
-TransferName = "CORAL"
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--transfer_name",  default = "coral")
+opt = parser.parse_args()
+
+TransferName = opt.transfer_name
+
 if __name__ == "__main__":
 
     # [Create Aligned Dataset] (Test)
