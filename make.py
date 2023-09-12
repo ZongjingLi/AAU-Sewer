@@ -25,7 +25,7 @@ if __name__ == "__main__":
     if TransferName == "coral":
       transfor = CORAL(scaling='standard') # [Transfer Model]
     if TransferName == "locit":
-      transfor = LocIT()# [Transfer Model]
+      transfor = LocIT(psi=30,transfer_threshold=0.0)# [Transfer Model]# [Transfer Model]
     if TransferName == "tca":
       transfor = TCA(n_components = 100 * 3 )# [Transfer Model]
     outputs = transfor.fit_transfer(aau_syn_test.train_data.reshape(N,npt*3), aau_real_test.train_data.reshape(M,npt*3))
